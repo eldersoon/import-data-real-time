@@ -37,9 +37,9 @@ export const UploadForm: React.FC = () => {
         return Upload.LIST_IGNORE;
       }
 
-      const isLt10M = file.size / 1024 / 1024 < 10;
+      const isLt10M = file.size / 1024 / 1024 < 20;
       if (!isLt10M) {
-        message.error(`${file.name}: Arquivo deve ser menor que 10MB!`);
+        message.error(`${file.name}: Arquivo deve ser menor que 20MB!`);
         return Upload.LIST_IGNORE;
       }
 
@@ -116,7 +116,7 @@ export const UploadForm: React.FC = () => {
         </p>
         <p className="ant-upload-text">Clique ou arraste os arquivos aqui para fazer upload</p>
         <p className="ant-upload-hint">
-          Suporte para múltiplos arquivos CSV, XLS e XLSX. Máximo 10MB por arquivo.
+          Suporte para múltiplos arquivos CSV, XLS e XLSX. Máximo 20MB por arquivo.
           <br />
           Cada arquivo criará um job separado na fila de processamento.
         </p>

@@ -40,14 +40,9 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
   const config = statusConfig[status];
 
   return (
-    <Badge
-      color={config.color}
-      text={
-        <span style={{ color: config.color, display: 'flex', alignItems: 'center', gap: 4 }}>
-          {config.icon}
-          {config.text}
-        </span>
-      }
-    />
+    <span style={{ color: config.color, display: 'flex', alignItems: 'center', gap: 4 }}>
+      {config.icon}
+      {config.text}
+    </span>
   );
 };
