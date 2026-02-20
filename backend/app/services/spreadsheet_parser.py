@@ -2,7 +2,7 @@
 
 import os
 from pathlib import Path
-from typing import Iterator
+from typing import Iterator, Dict, Any
 import pandas as pd
 from app.core.exceptions import ProcessingError
 from app.core.logging import get_logger
@@ -13,12 +13,12 @@ logger = get_logger(__name__)
 class SpreadsheetParser:
     """Service for parsing CSV and Excel files"""
 
-    REQUIRED_COLUMNS = ['modelo', 'placa', 'ano', 'valor_fipe']
+    REQUIRED_COLUMNS = ['modelo', 'placa', 'ano', 'valor_fipe']  # Kept for backward compatibility
 
     @classmethod
     def _validate_columns(cls, df: pd.DataFrame) -> None:
         """
-        Validate that required columns exist.
+        Validate that required columns exist (legacy method for vehicle imports).
 
         Args:
             df: DataFrame to validate
@@ -94,6 +94,46 @@ class SpreadsheetParser:
                 # Excel files need to be read entirely first
                 full_df = pd.read_excel(BytesIO(file_bytes))
                 cls._validate_columns(full_df)
+                for i in range(0, len(full_df), chunk_size):
+                    yield full_df.iloc[i:i + chunk_size]
+            else:
+                raise ProcessingError(f"Formato de arquivo não suportado: {file_ext}")
+        except Exception as e:
+            raise ProcessingError(f"Falha ao ler arquivo: {str(e)}")
+
+    @classmethod
+    def read_file_with_mapping(
+        cls,
+        file_path: str,
+        mapping_config: Dict[str, Any],
+        chunk_size: int = 1000
+    ) -> Iterator[pd.DataFrame]:
+        """
+        Read file in chunks with mapping configuration.
+
+        Args:
+            file_path: Path to file
+            mapping_config: Mapping configuration dict
+            chunk_size: Number of rows per chunk
+
+        Yields:
+            DataFrame chunks with mapped columns
+        """
+        from typing import Dict, Any
+        
+        file_ext = Path(file_path).suffix.lower()
+        columns_mapping = {col['sheet_column']: col['db_column'] for col in mapping_config.get('columns', [])}
+
+        try:
+            if file_ext == '.csv':
+                for chunk in pd.read_csv(file_path, chunksize=chunk_size):
+                    # Rename columns according to mapping
+                    chunk = chunk.rename(columns=columns_mapping)
+                    yield chunk
+            elif file_ext in ['.xlsx', '.xls']:
+                full_df = pd.read_excel(file_path)
+                # Rename columns according to mapping
+                full_df = full_df.rename(columns=columns_mapping)
                 for i in range(0, len(full_df), chunk_size):
                     yield full_df.iloc[i:i + chunk_size]
             else:

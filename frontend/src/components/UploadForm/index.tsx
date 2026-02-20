@@ -78,7 +78,7 @@ export const UploadForm: React.FC = () => {
       }
 
       try {
-        const result = await createJob.mutateAsync(file);
+        const result = await createJob.mutateAsync({ file });
         results.push({
           filename: fileItem.name,
           jobId: result.job_id,

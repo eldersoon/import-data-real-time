@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { jobsApi } from '../endpoints';
-import { ImportJobResponse, ImportJobDetail } from '../../types/api';
+import { ImportJobResponse, ImportJobDetail, MappingConfig } from '../../types/api';
 
 export const useJobs = (
   params?: {
@@ -34,7 +34,8 @@ export const useCreateJob = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (file: File) => jobsApi.create(file),
+    mutationFn: ({ file, mappingConfig, templateId }: { file: File; mappingConfig?: MappingConfig; templateId?: string }) =>
+      jobsApi.create(file, mappingConfig, templateId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
     },

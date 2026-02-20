@@ -4,7 +4,7 @@ import json
 import uuid
 import asyncio
 from typing import Optional
-from fastapi import APIRouter, Depends, UploadFile, File, Query
+from fastapi import APIRouter, Depends, UploadFile, File, Query, Form
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
@@ -15,7 +15,9 @@ from app.api.schemas.import_job import (
     ImportJobCreateResponse,
     JobLogResponse,
 )
+from app.api.schemas.mapping import PreviewResponse, ImportJobCreateRequest
 from app.services.import_service import ImportService
+from app.services.spreadsheet_preview_service import SpreadsheetPreviewService
 from app.infrastructure.repositories.import_job_repository import ImportJobRepository
 from app.infrastructure.repositories.job_log_repository import JobLogRepository
 from app.infrastructure.events.job_events import get_event_manager
@@ -27,9 +29,41 @@ logger = get_logger(__name__)
 router = APIRouter(prefix="/imports", tags=["imports"])
 
 
+@router.post("/preview", response_model=PreviewResponse, status_code=200)
+async def preview_spreadsheet(
+    file: UploadFile = File(...),
+):
+    """
+    Preview spreadsheet file and return columns, types, and sample data.
+
+    Args:
+        file: CSV or Excel file
+
+    Returns:
+        Preview information with columns and sample rows
+    """
+    try:
+        # Read file content
+        file_content = await file.read()
+        
+        # Analyze file
+        preview_service = SpreadsheetPreviewService()
+        analysis = preview_service.analyze_file(
+            file_bytes=file_content,
+            filename=file.filename
+        )
+
+        return PreviewResponse(**analysis)
+    except Exception as e:
+        logger.error("failed_to_preview_file", error=str(e))
+        raise
+
+
 @router.post("", response_model=ImportJobCreateResponse, status_code=201)
 async def create_import_job(
     file: UploadFile = File(...),
+    mapping_config: Optional[str] = Form(None),
+    template_id: Optional[str] = Form(None),
     db: Session = Depends(get_database),
 ):
     """
@@ -37,13 +71,57 @@ async def create_import_job(
 
     Args:
         file: CSV or Excel file
+        mapping_config: Optional JSON string with mapping configuration
+        template_id: Optional template ID to use
         db: Database session
 
     Returns:
         Created job information
     """
+    import json as json_lib
+    
+    # Parse mapping_config if provided
+    parsed_mapping_config = None
+    if mapping_config:
+        # Handle both string and already parsed dict (in case FastAPI auto-parses)
+        if isinstance(mapping_config, str):
+            if mapping_config.strip():
+                try:
+                    parsed_mapping_config = json_lib.loads(mapping_config)
+                except json_lib.JSONDecodeError as e:
+                    logger.warning("invalid_mapping_config_json", error=str(e), raw_value=mapping_config[:100])
+                    parsed_mapping_config = None
+        elif isinstance(mapping_config, dict):
+            # Already parsed (shouldn't happen with Form(), but handle it)
+            parsed_mapping_config = mapping_config
+        
+        # Validate parsed config
+        if parsed_mapping_config:
+            if not isinstance(parsed_mapping_config, dict) or not parsed_mapping_config:
+                logger.warning("mapping_config_empty_dict")
+                parsed_mapping_config = None
+            elif 'columns' not in parsed_mapping_config or not parsed_mapping_config.get('columns'):
+                logger.warning("mapping_config_missing_columns", keys=list(parsed_mapping_config.keys()))
+                parsed_mapping_config = None
+            elif not isinstance(parsed_mapping_config.get('columns'), list) or len(parsed_mapping_config['columns']) == 0:
+                logger.warning("mapping_config_empty_columns")
+                parsed_mapping_config = None
+
+    logger.info(
+        "creating_import_job",
+        filename=file.filename,
+        has_mapping_config=parsed_mapping_config is not None,
+        has_template_id=template_id is not None,
+        mapping_config_type=type(mapping_config).__name__ if mapping_config else None,
+        template_id_value=template_id
+    )
+
     service = ImportService(db)
-    job_id = service.create_import_job(file)
+    job_id = service.create_import_job(
+        file,
+        mapping_config=parsed_mapping_config,
+        template_id=uuid.UUID(template_id) if template_id else None
+    )
 
     return ImportJobCreateResponse(
         job_id=str(job_id),

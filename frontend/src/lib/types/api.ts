@@ -51,3 +51,49 @@ export interface PaginatedResponse<T> {
   page: number;
   page_size: number;
 }
+
+// Mapping and Preview types
+export interface ColumnInfo {
+  name: string;
+  suggested_type: string;
+  sample_values: any[];
+  null_count: number;
+  total_count: number;
+}
+
+export interface PreviewResponse {
+  columns: ColumnInfo[];
+  preview_rows: Record<string, any>[];
+  total_rows: number;
+  total_columns: number;
+}
+
+export interface ForeignKeyConfig {
+  table: string;
+  lookup_column: string;
+  on_missing: 'create' | 'ignore' | 'error';
+}
+
+export interface ColumnMapping {
+  sheet_column: string;
+  db_column: string;
+  type: 'string' | 'int' | 'float' | 'decimal' | 'date' | 'datetime' | 'boolean' | 'fk';
+  required: boolean;
+  fk?: ForeignKeyConfig;
+}
+
+export interface MappingConfig {
+  target_table: string;
+  create_table: boolean;
+  columns: ColumnMapping[];
+}
+
+export interface ImportTemplate {
+  id: string;
+  name: string;
+  target_table: string;
+  create_table: boolean;
+  mapping_config: MappingConfig;
+  created_at: string;
+  updated_at: string;
+}

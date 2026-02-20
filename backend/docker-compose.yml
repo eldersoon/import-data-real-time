@@ -42,7 +42,7 @@ services:
   backend:
     build: .
     container_name: vehicle_import_backend
-    command: sh -c "sleep 5 && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    command: sh -c "sleep 5 && ./scripts/init_db.sh && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
     volumes:
       - .:/app
       - uploads:/app/uploads

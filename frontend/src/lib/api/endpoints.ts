@@ -6,14 +6,39 @@ import {
   VehicleResponse,
   VehicleUpdate,
   PaginatedResponse,
+  PreviewResponse,
+  MappingConfig,
+  ImportTemplate,
 } from '../types/api';
 
 export const jobsApi = {
-  create: async (file: File): Promise<ImportJobCreateResponse> => {
+  create: async (
+    file: File,
+    mappingConfig?: MappingConfig,
+    templateId?: string
+  ): Promise<ImportJobCreateResponse> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (mappingConfig) {
+      formData.append('mapping_config', JSON.stringify(mappingConfig));
+    }
+    if (templateId) {
+      formData.append('template_id', templateId);
+    }
+
+    const response = await apiClient.post<ImportJobCreateResponse>('/imports', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
+  preview: async (file: File): Promise<PreviewResponse> => {
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await apiClient.post<ImportJobCreateResponse>('/imports', formData, {
+    const response = await apiClient.post<PreviewResponse>('/imports/preview', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -69,5 +94,53 @@ export const vehiclesApi = {
 export const adminApi = {
   clearAllData: async (): Promise<void> => {
     await apiClient.delete('/admin/clear-data');
+  },
+};
+
+export const templatesApi = {
+  list: async (params?: {
+    skip?: number;
+    limit?: number;
+    target_table?: string;
+  }): Promise<ImportTemplate[]> => {
+    const response = await apiClient.get<ImportTemplate[]>('/templates', { params });
+    return response.data;
+  },
+
+  getById: async (id: string): Promise<ImportTemplate> => {
+    const response = await apiClient.get<ImportTemplate>(`/templates/${id}`);
+    return response.data;
+  },
+
+  create: async (
+    name: string,
+    target_table: string,
+    mapping_config: MappingConfig,
+    create_table: boolean = false
+  ): Promise<ImportTemplate> => {
+    const response = await apiClient.post<ImportTemplate>('/templates', {
+      name,
+      target_table,
+      mapping_config,
+      create_table,
+    });
+    return response.data;
+  },
+
+  update: async (
+    id: string,
+    data: {
+      name?: string;
+      target_table?: string;
+      mapping_config?: MappingConfig;
+      create_table?: boolean;
+    }
+  ): Promise<ImportTemplate> => {
+    const response = await apiClient.put<ImportTemplate>(`/templates/${id}`, data);
+    return response.data;
+  },
+
+  delete: async (id: string): Promise<void> => {
+    await apiClient.delete(`/templates/${id}`);
   },
 };

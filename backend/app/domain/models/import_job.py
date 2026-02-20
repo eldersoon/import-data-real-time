@@ -3,8 +3,8 @@
 import uuid
 from datetime import datetime
 from enum import Enum
-from sqlalchemy import Column, String, Integer, DateTime, CheckConstraint, Index
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Column, String, Integer, DateTime, CheckConstraint, Index, ForeignKey
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 
 from app.core.database import Base
 
@@ -31,6 +31,8 @@ class ImportJob(Base):
     started_at = Column(DateTime, nullable=True)
     finished_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    template_id = Column(UUID(as_uuid=True), ForeignKey("import_templates.id", ondelete="SET NULL"), nullable=True)
+    mapping_config = Column(JSONB, nullable=True)
 
     __table_args__ = (
         CheckConstraint(

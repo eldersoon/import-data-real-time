@@ -1,9 +1,10 @@
 #!/bin/bash
-# Script to initialize database and run migrations
+# Script to reset database: drop all tables and reapply migrations
 
 set -e
 
-echo "Running database migrations..."
+echo "⚠️  WARNING: This will drop all tables and data!"
+echo "Resetting database..."
 
 # Check if we're in a Docker container or local
 if [ -f /.dockerenv ]; then
@@ -47,12 +48,20 @@ if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
     exit 1
 fi
 
-echo "Running migrations..."
+# Check current revision
+CURRENT_REV=$(alembic current 2>/dev/null | awk '{print $1}' || echo "")
+
+if [ -n "$CURRENT_REV" ] && [ "$CURRENT_REV" != "None" ]; then
+    echo "Current revision: $CURRENT_REV"
+    echo "Downgrading database to base..."
+    alembic downgrade base || echo "Warning: Could not downgrade (might already be at base)"
+else
+    echo "No migrations applied yet (database might be empty)"
+fi
+
+# Upgrade to head (recreates all tables)
+echo "Upgrading database to head..."
 alembic upgrade head
 
-if [ $? -eq 0 ]; then
-    echo "✅ Migrations completed successfully!"
-else
-    echo "❌ Failed to run migrations. Check database connection."
-    exit 1
-fi
+echo "✅ Database reset completed successfully!"
+echo "All tables have been dropped and recreated with latest schema."

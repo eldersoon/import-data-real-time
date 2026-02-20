@@ -76,9 +76,15 @@ cp .env.example .env
 docker-compose up -d
 ```
 
-6. Execute as migrações:
+**Nota**: As migrações do banco de dados são executadas automaticamente quando o container do backend inicia.
+
+6. (Opcional) Para resetar o banco de dados (limpar todas as tabelas e recriar):
 ```bash
-alembic upgrade head
+# Usando Makefile
+make reset-db
+
+# Ou diretamente
+docker-compose exec backend ./scripts/reset_db.sh
 ```
 
 7. Crie a fila SQS (se usar LocalStack):
@@ -91,6 +97,46 @@ aws --endpoint-url=http://localhost:4566 sqs create-queue --queue-name vehicle-i
 ```
 
 **Nota**: Se estiver usando Docker Compose, o worker criará a fila automaticamente na inicialização.
+
+## 🔧 Comandos Úteis
+
+### Usando Makefile
+
+```bash
+# Executar migrações manualmente
+make migrate
+
+# Resetar banco de dados (drop all + recreate)
+make reset-db
+
+# Iniciar serviços
+make up
+
+# Parar serviços
+make down
+
+# Reiniciar serviços
+make restart
+
+# Ver logs do backend
+make logs
+
+# Ver todos os logs
+make logs-all
+```
+
+### Comandos Docker Compose Diretos
+
+```bash
+# Executar migrações manualmente
+docker-compose exec backend alembic upgrade head
+
+# Resetar banco de dados
+docker-compose exec backend ./scripts/reset_db.sh
+
+# Ver logs
+docker-compose logs -f backend
+```
 
 ## 🏃 Executando
 

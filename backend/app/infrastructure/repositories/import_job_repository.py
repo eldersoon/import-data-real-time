@@ -1,7 +1,7 @@
 """Repository for ImportJob operations"""
 
 import uuid
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
@@ -18,22 +18,57 @@ class ImportJobRepository:
     def __init__(self, db: Session):
         self.db = db
 
-    def create(self, filename: str) -> ImportJob:
+    def create(
+        self,
+        filename: str,
+        template_id: Optional[uuid.UUID] = None,
+        mapping_config: Optional[Dict[str, Any]] = None
+    ) -> ImportJob:
         """
         Create a new import job.
 
         Args:
             filename: File name
+            template_id: Optional template ID
+            mapping_config: Optional mapping configuration
 
         Returns:
             Created ImportJob instance
         """
-        job = ImportJob(filename=filename)
+        # Validate and normalize mapping_config
+        final_mapping_config = None
+        if mapping_config:
+            if isinstance(mapping_config, dict) and len(mapping_config) > 0:
+                # Ensure it has required structure
+                if 'columns' in mapping_config and isinstance(mapping_config.get('columns'), list):
+                    if len(mapping_config['columns']) > 0:
+                        final_mapping_config = mapping_config
+                    else:
+                        logger.warning("mapping_config_has_empty_columns", filename=filename)
+                else:
+                    logger.warning("mapping_config_missing_columns", filename=filename)
+            else:
+                logger.warning("mapping_config_invalid_format", filename=filename, config_type=type(mapping_config).__name__)
+
+        job = ImportJob(
+            filename=filename,
+            template_id=template_id,
+            mapping_config=final_mapping_config
+        )
         self.db.add(job)
         self.db.commit()
         self.db.refresh(job)
 
-        logger.info("import_job_created", job_id=str(job.id), filename=filename)
+        # Verify what was saved
+        logger.info(
+            "import_job_created",
+            job_id=str(job.id),
+            filename=filename,
+            has_template_id=job.template_id is not None,
+            has_mapping_config=job.mapping_config is not None,
+            mapping_config_type=type(job.mapping_config).__name__ if job.mapping_config else None,
+            mapping_config_keys=list(job.mapping_config.keys()) if job.mapping_config and isinstance(job.mapping_config, dict) else None
+        )
         return job
 
     def get_by_id(self, job_id: uuid.UUID) -> Optional[ImportJob]:
@@ -46,7 +81,17 @@ class ImportJobRepository:
         Returns:
             ImportJob instance or None
         """
-        return self.db.query(ImportJob).filter(ImportJob.id == job_id).first()
+        job = self.db.query(ImportJob).filter(ImportJob.id == job_id).first()
+        if job:
+            # Log what was retrieved for debugging
+            logger.debug(
+                "job_retrieved",
+                job_id=str(job_id),
+                has_template_id=job.template_id is not None,
+                has_mapping_config=job.mapping_config is not None,
+                mapping_config_type=type(job.mapping_config).__name__ if job.mapping_config else None
+            )
+        return job
 
     def list(
         self,
