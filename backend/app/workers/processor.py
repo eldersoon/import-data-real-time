@@ -191,8 +191,18 @@ class JobProcessor:
                 if not is_valid:
                     raise ProcessingError(f"Invalid mapping config: {', '.join(errors)}")
 
-                # Create table if needed
-                self.mapping_service.create_table_if_needed(db, mapping_config)
+                # Create table if needed (pass job_id and entity metadata to link DynamicEntity to job)
+                entity_display_name = mapping_config.get('entity_display_name')
+                entity_description = mapping_config.get('entity_description')
+                entity_icon = mapping_config.get('entity_icon')
+                self.mapping_service.create_table_if_needed(
+                    db, 
+                    mapping_config, 
+                    job_id=job_id,
+                    entity_display_name=entity_display_name,
+                    entity_description=entity_description,
+                    entity_icon=entity_icon
+                )
 
                 # Process with dynamic mapping
                 total_processed, total_errors = self._process_dynamic_import(

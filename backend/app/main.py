@@ -19,7 +19,7 @@ from app.api.exceptions import (
     processing_exception_handler,
     general_exception_handler,
 )
-from app.api.routes import imports, vehicles, admin, templates
+from app.api.routes import imports, vehicles, admin, templates, entities, metadata
 from app.infrastructure.events.job_monitor import get_monitor
 
 # Configure logging
@@ -67,6 +67,8 @@ app.include_router(imports.router, prefix=settings.api_prefix)
 app.include_router(vehicles.router, prefix=settings.api_prefix)
 app.include_router(admin.router, prefix=settings.api_prefix)
 app.include_router(templates.router, prefix=settings.api_prefix)
+app.include_router(entities.router, prefix=settings.api_prefix)
+app.include_router(metadata.router, prefix=settings.api_prefix)
 
 
 @app.get("/health")

@@ -144,3 +144,110 @@ export const templatesApi = {
     await apiClient.delete(`/templates/${id}`);
   },
 };
+
+export const entitiesApi = {
+  list: async (visibleOnly?: boolean): Promise<any[]> => {
+    const response = await apiClient.get<any[]>('/entities', {
+      params: { visible_only: visibleOnly },
+    });
+    return response.data;
+  },
+
+  getByTableName: async (tableName: string): Promise<any> => {
+    const response = await apiClient.get<any>(`/entities/${tableName}`);
+    return response.data;
+  },
+
+  updateVisibility: async (tableName: string, isVisible: boolean): Promise<any> => {
+    const response = await apiClient.put<any>(`/entities/${tableName}/visibility`, null, {
+      params: { is_visible: isVisible },
+    });
+    return response.data;
+  },
+
+  updateDisplayName: async (tableName: string, displayName: string): Promise<any> => {
+    const response = await apiClient.put<any>(`/entities/${tableName}/display-name`, null, {
+      params: { display_name: displayName },
+    });
+    return response.data;
+  },
+
+  update: async (tableName: string, data: {
+    display_name?: string;
+    description?: string;
+    icon?: string;
+    is_visible?: boolean;
+  }): Promise<any> => {
+    const response = await apiClient.put<any>(`/entities/${tableName}`, data);
+    return response.data;
+  },
+
+  // Entity data CRUD
+  listData: async (
+    tableName: string,
+    params?: {
+      page?: number;
+      page_size?: number;
+    }
+  ): Promise<PaginatedResponse<Record<string, any>>> => {
+    const response = await apiClient.get<PaginatedResponse<Record<string, any>>>(
+      `/entities/${tableName}/data`,
+      { params }
+    );
+    return response.data;
+  },
+
+  getDataById: async (tableName: string, id: string): Promise<{ data: Record<string, any> }> => {
+    const response = await apiClient.get<{ data: Record<string, any> }>(
+      `/entities/${tableName}/data/${id}`
+    );
+    return response.data;
+  },
+
+  createData: async (tableName: string, data: Record<string, any>): Promise<{ data: Record<string, any> }> => {
+    const response = await apiClient.post<{ data: Record<string, any> }>(
+      `/entities/${tableName}/data`,
+      { data }
+    );
+    return response.data;
+  },
+
+  updateData: async (
+    tableName: string,
+    id: string,
+    data: Record<string, any>
+  ): Promise<{ data: Record<string, any> }> => {
+    const response = await apiClient.put<{ data: Record<string, any> }>(
+      `/entities/${tableName}/data/${id}`,
+      { data }
+    );
+    return response.data;
+  },
+
+  deleteData: async (tableName: string, id: string): Promise<void> => {
+    await apiClient.delete(`/entities/${tableName}/data/${id}`);
+  },
+};
+
+export const metadataApi = {
+  listTables: async (): Promise<{ tables: string[] }> => {
+    const response = await apiClient.get<{ tables: string[] }>('/metadata/tables');
+    return response.data;
+  },
+
+  getTableColumns: async (tableName: string): Promise<{
+    table_name: string;
+    schema: string;
+    columns: Array<{
+      column_name: string;
+      data_type: string;
+      is_nullable: boolean;
+      column_default?: string;
+      max_length?: number;
+    }>;
+    primary_key?: string;
+  }> => {
+    const response = await apiClient.get(`/metadata/tables/${tableName}/columns`);
+    return response.data;
+  },
+};

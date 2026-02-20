@@ -86,6 +86,9 @@ export interface MappingConfig {
   target_table: string;
   create_table: boolean;
   columns: ColumnMapping[];
+  entity_display_name?: string;
+  entity_description?: string;
+  entity_icon?: string;
 }
 
 export interface ImportTemplate {
@@ -96,4 +99,39 @@ export interface ImportTemplate {
   mapping_config: MappingConfig;
   created_at: string;
   updated_at: string;
+}
+
+// Dynamic Entity types
+export interface DynamicEntityResponse {
+  id: string;
+  table_name: string;
+  display_name: string;
+  description?: string;
+  is_visible: boolean;
+  icon?: string;
+  created_at: string;
+  updated_at: string;
+  created_by_job_id?: string;
+}
+
+export interface DynamicEntityUpdate {
+  display_name?: string;
+  description?: string;
+  icon?: string;
+  is_visible?: boolean;
+}
+
+export interface TableColumnInfo {
+  column_name: string;
+  data_type: string;
+  is_nullable: boolean;
+  column_default?: string;
+  max_length?: number;
+}
+
+export interface TableInfoResponse {
+  table_name: string;
+  schema: string;
+  columns: TableColumnInfo[];
+  primary_key?: string;
 }

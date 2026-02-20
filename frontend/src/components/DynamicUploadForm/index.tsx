@@ -59,6 +59,14 @@ export const DynamicUploadForm: React.FC = () => {
       return;
     }
 
+    // Validate entity fields if creating table
+    if (mappingConfig.create_table) {
+      if (!mappingConfig.entity_display_name || !mappingConfig.entity_display_name.trim()) {
+        message.error('Por favor, defina o nome de exibição da entidade');
+        return;
+      }
+    }
+
     try {
       const result = await createJob.mutateAsync({ file, mappingConfig });
       message.success('Importação iniciada com sucesso!');
@@ -107,6 +115,8 @@ export const DynamicUploadForm: React.FC = () => {
               target_table: mappingConfig?.target_table || '',
               create_table: mappingConfig?.create_table || false,
               columns: mappings,
+              entity_display_name: mappingConfig?.entity_display_name,
+              entity_description: mappingConfig?.entity_description,
             });
           }}
           targetTable={mappingConfig?.target_table || ''}
@@ -123,6 +133,20 @@ export const DynamicUploadForm: React.FC = () => {
             });
           }}
           createTable={mappingConfig?.create_table || false}
+          entityDisplayName={mappingConfig?.entity_display_name}
+          onEntityDisplayNameChange={(name) => {
+            setMappingConfig({
+              ...mappingConfig!,
+              entity_display_name: name,
+            });
+          }}
+          entityDescription={mappingConfig?.entity_description}
+          onEntityDescriptionChange={(description) => {
+            setMappingConfig({
+              ...mappingConfig!,
+              entity_description: description,
+            });
+          }}
         />
       ) : null,
     },
@@ -148,6 +172,8 @@ export const DynamicUploadForm: React.FC = () => {
                 target_table: '',
                 create_table: false,
                 columns: [],
+                entity_display_name: '',
+                entity_description: '',
               });
             }
             setCurrentStep('mapping');

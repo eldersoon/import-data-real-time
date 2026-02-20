@@ -1,6 +1,7 @@
 """Mapping service for handling dynamic import mappings"""
 
 import re
+import uuid
 from typing import Dict, Any, List, Optional, Tuple
 from decimal import Decimal
 from datetime import datetime, date
@@ -265,7 +266,11 @@ class MappingService:
     def create_table_if_needed(
         cls,
         db: Session,
-        mapping_config: Dict[str, Any]
+        mapping_config: Dict[str, Any],
+        job_id: Optional[uuid.UUID] = None,
+        entity_display_name: Optional[str] = None,
+        entity_description: Optional[str] = None,
+        entity_icon: Optional[str] = None
     ) -> None:
         """
         Create table dynamically if needed.
@@ -273,6 +278,10 @@ class MappingService:
         Args:
             db: Database session
             mapping_config: Mapping configuration dict
+            job_id: Optional job ID that created this table
+            entity_display_name: Optional display name for the entity
+            entity_description: Optional description for the entity
+            entity_icon: Optional icon name for the entity
 
         Raises:
             ProcessingError: If table creation fails
@@ -323,10 +332,58 @@ class MappingService:
 
             logger.info("table_created", table=target_table)
 
+            # Create DynamicEntity record if it doesn't exist
+            from app.infrastructure.repositories.dynamic_entity_repository import DynamicEntityRepository
+            entity_repo = DynamicEntityRepository(db)
+            existing_entity = entity_repo.get_by_table_name(target_table)
+            
+            if not existing_entity:
+                # Use provided display name or generate from table name (humanize)
+                display_name = entity_display_name or cls._humanize_table_name(target_table)
+                description = entity_description or f"Table created dynamically from import"
+                entity_repo.create(
+                    table_name=target_table,
+                    display_name=display_name,
+                    description=description,
+                    icon=entity_icon,
+                    is_visible=True,
+                    job_id=job_id
+                )
+                logger.info("dynamic_entity_record_created", table=target_table, display_name=display_name)
+
         except SQLAlchemyError as e:
             db.rollback()
             logger.error("table_creation_failed", table=target_table, error=str(e))
             raise ProcessingError(f"Failed to create table: {str(e)}")
+
+    @classmethod
+    def _humanize_table_name(cls, table_name: str) -> str:
+        """
+        Convert table name to human-readable display name.
+        
+        Examples:
+            tb_user -> User
+            tb_company -> Company
+            user_profiles -> User Profiles
+        
+        Args:
+            table_name: Database table name
+            
+        Returns:
+            Human-readable display name
+        """
+        # Remove common prefixes
+        name = table_name
+        if name.startswith('tb_'):
+            name = name[3:]
+        elif name.startswith('tbl_'):
+            name = name[4:]
+        
+        # Replace underscores with spaces and title case
+        name = name.replace('_', ' ')
+        name = ' '.join(word.capitalize() for word in name.split())
+        
+        return name
 
     @classmethod
     def _map_type_to_sql(cls, type_name: str) -> str:

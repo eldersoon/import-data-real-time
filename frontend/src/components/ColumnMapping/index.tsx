@@ -1,19 +1,24 @@
 'use client';
 
+import React from 'react';
 import { Table, Input, Select, Switch, Button, Space, Card, Typography } from 'antd';
-import { ColumnMapping, ColumnInfo } from '@/lib/types/api';
+import { ColumnMapping as ColumnMappingType, ColumnInfo } from '@/lib/types/api';
 import { ForeignKeyConfig } from './ForeignKeyConfig';
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
 
 interface ColumnMappingProps {
   columns: ColumnInfo[];
-  mappings: ColumnMapping[];
-  onChange: (mappings: ColumnMapping[]) => void;
+  mappings: ColumnMappingType[];
+  onChange: (mappings: ColumnMappingType[]) => void;
   targetTable: string;
   onTargetTableChange: (table: string) => void;
   onCreateTableChange: (create: boolean) => void;
   createTable: boolean;
+  entityDisplayName?: string;
+  onEntityDisplayNameChange?: (name: string) => void;
+  entityDescription?: string;
+  onEntityDescriptionChange?: (description: string) => void;
 }
 
 const TYPE_OPTIONS = [
@@ -35,8 +40,12 @@ export const ColumnMapping: React.FC<ColumnMappingProps> = ({
   onTargetTableChange,
   onCreateTableChange,
   createTable,
+  entityDisplayName,
+  onEntityDisplayNameChange,
+  entityDescription,
+  onEntityDescriptionChange,
 }) => {
-  const handleMappingChange = (index: number, field: keyof ColumnMapping, value: any) => {
+  const handleMappingChange = (index: number, field: keyof ColumnMappingType, value: any) => {
     const newMappings = [...mappings];
     newMappings[index] = { ...newMappings[index], [field]: value };
     
@@ -57,7 +66,7 @@ export const ColumnMapping: React.FC<ColumnMappingProps> = ({
   };
 
   const handleAddMapping = (column: ColumnInfo) => {
-    const newMapping: ColumnMapping = {
+    const newMapping: ColumnMappingType = {
       sheet_column: column.name,
       db_column: column.name.toLowerCase().replace(/\s+/g, '_'),
       type: column.suggested_type as any,
@@ -86,7 +95,7 @@ export const ColumnMapping: React.FC<ColumnMappingProps> = ({
       title: 'Coluna no Banco',
       dataIndex: 'db_column',
       key: 'db_column',
-      render: (text: string, record: ColumnMapping, index: number) => (
+      render: (text: string, record: ColumnMappingType, index: number) => (
         <Input
           value={text}
           onChange={(e) => handleMappingChange(index, 'db_column', e.target.value)}
@@ -98,7 +107,7 @@ export const ColumnMapping: React.FC<ColumnMappingProps> = ({
       title: 'Tipo',
       dataIndex: 'type',
       key: 'type',
-      render: (type: string, record: ColumnMapping, index: number) => (
+      render: (type: string, record: ColumnMappingType, index: number) => (
         <Select
           value={type}
           onChange={(value) => handleMappingChange(index, 'type', value)}
@@ -111,7 +120,7 @@ export const ColumnMapping: React.FC<ColumnMappingProps> = ({
       title: 'Obrigatório',
       dataIndex: 'required',
       key: 'required',
-      render: (required: boolean, record: ColumnMapping, index: number) => (
+      render: (required: boolean, record: ColumnMappingType, index: number) => (
         <Switch
           checked={required}
           onChange={(checked) => handleMappingChange(index, 'required', checked)}
@@ -121,7 +130,7 @@ export const ColumnMapping: React.FC<ColumnMappingProps> = ({
     {
       title: 'Configuração FK',
       key: 'fk',
-      render: (_: any, record: ColumnMapping, index: number) => {
+      render: (_: any, record: ColumnMappingType, index: number) => {
         if (record.type !== 'fk') return null;
         return (
           <ForeignKeyConfig
@@ -134,7 +143,7 @@ export const ColumnMapping: React.FC<ColumnMappingProps> = ({
     {
       title: 'Ações',
       key: 'actions',
-      render: (_: any, record: ColumnMapping, index: number) => (
+      render: (_: any, record: ColumnMappingType, index: number) => (
         <Button danger onClick={() => handleRemoveMapping(index)}>
           Remover
         </Button>
@@ -146,23 +155,57 @@ export const ColumnMapping: React.FC<ColumnMappingProps> = ({
     <div>
       <Card style={{ marginBottom: 16 }}>
         <Title level={4}>Configuração da Tabela Destino</Title>
-        <Space direction="vertical" style={{ width: '100%' }}>
+        <Space direction="vertical" style={{ width: '100%' }} size="middle">
           <div>
-            <label>Nome da Tabela: </label>
+            <label style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>Nome da Tabela: </label>
             <Input
               value={targetTable}
               onChange={(e) => onTargetTableChange(e.target.value)}
               placeholder="tb_exemplo"
-              style={{ width: 300 }}
+              style={{ width: '100%', maxWidth: 400 }}
             />
           </div>
           <div>
-            <label>Criar tabela se não existir: </label>
+            <label style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>Criar tabela se não existir: </label>
             <Switch
               checked={createTable}
               onChange={onCreateTableChange}
             />
           </div>
+          {createTable && (
+            <Card type="inner" style={{ backgroundColor: '#f0f2f5', marginTop: 16 }}>
+              <Title level={5} style={{ marginTop: 0 }}>Informações da Entidade</Title>
+              <Space direction="vertical" style={{ width: '100%' }} size="middle">
+                <div>
+                  <label style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>
+                    Nome de Exibição da Entidade <span style={{ color: 'red' }}>*</span>:
+                  </label>
+                  <Input
+                    value={entityDisplayName || ''}
+                    onChange={(e) => onEntityDisplayNameChange?.(e.target.value)}
+                    placeholder="Ex: Usuários, Produtos, Clientes, etc."
+                    style={{ width: '100%', maxWidth: 400 }}
+                    required
+                  />
+                  <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 4 }}>
+                    Este nome aparecerá no menu lateral
+                  </Text>
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>
+                    Descrição da Entidade (opcional):
+                  </label>
+                  <Input.TextArea
+                    value={entityDescription || ''}
+                    onChange={(e) => onEntityDescriptionChange?.(e.target.value)}
+                    placeholder="Descrição da entidade que aparecerá no menu"
+                    rows={3}
+                    style={{ width: '100%', maxWidth: 400 }}
+                  />
+                </div>
+              </Space>
+            </Card>
+          )}
         </Space>
       </Card>
 
